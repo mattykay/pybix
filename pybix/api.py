@@ -35,7 +35,7 @@ class ZabbixAPI(object):
 
         # Zabbix auth specific
         self.AUTH = ''
-        self.ID = None
+        self.ID = 0
 
         # Requests specific
         self.TIMEOUT = timeout or os.environ.get(
@@ -53,7 +53,7 @@ class ZabbixAPI(object):
     def __exit__(self, exception_type, exception_value, traceback):
         self.logout()
 
-    def __getattr__(self, name):
+    def __getattr__(self, name : str):
         return ZabbixObject(name, self)
 
     def login(self, user: str = None, password: str = None) -> None:
@@ -74,9 +74,9 @@ class ZabbixAPI(object):
 
             # TODO check return for result
             if self.user.logout():
-                self.AUTH = None
+                self.AUTH = ''
 
-    def do_request(self, method, params=None) -> str:
+    def do_request(self, method: str, params: dict = None) -> str:
         request = {
             'jsonrpc': '2.0',
             'method': method,
@@ -85,16 +85,16 @@ class ZabbixAPI(object):
         }
 
         # Only add auth if method requires it
-        if self.AUTH and (method not in ('apiinfo.version', 'user.login')):
+        if self.AUTH and (method not in ('apiinfo.version', 'user.login', 'user.checkAuthentication')):
             request['auth'] = self.AUTH
 
         logger.debug(
             f"Sending: {json.dumps(request, indent=4, separators=(',', ': '))}",
         )
 
-        response = self.session.post(self.url,
+        response = self.SESSION.post(self.URL,
                                      data=json.dumps(request),
-                                     timeout=self.timeout)
+                                     timeout=self.TIMEOUT)
         response.raise_for_status()
 
         try:
@@ -125,15 +125,20 @@ class ZabbixAPI(object):
 
     @property
     def is_authenticated(self):
+        if not self.AUTH:
+            logger.debug("is_authenticated(): No AUTH token")
+            return False
+
         try:
             self.user.checkAuthentication(sessionid=self.AUTH)
-        except ZabbixAPIException:
+        except ZabbixAPIException as ex:
+            logger.debug(f"is_authenticated(): ZabbixAPIException {ex}")
             return False
         return True
 
 
 class ZabbixObject(object):
-    def __init__(self, name, parent):
+    def __init__(self, name: str, parent: ZabbixAPI):
         self.NAME = name
         self.PARENT = parent
 
