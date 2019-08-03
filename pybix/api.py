@@ -31,7 +31,7 @@ class ZabbixAPI(object):
         """
         url = url or os.environ.get(
             'ZABBIX_SERVER') or 'https://localhost/zabbix'
-        self.URL = url + '/api_jsonrpc.php' if not url.endswith(
+        self.URL = f"{url}/api_jsonrpc.php" if not url.endswith(
             '/api_jsonrpc.php') else url
 
         # Zabbix auth specific
