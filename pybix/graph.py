@@ -1,6 +1,15 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""Graph
+    Contains methods relating to graph image exporting
+"""
+
 import requests
 import os
 import sys
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class GraphImage(object):
@@ -10,8 +19,16 @@ class GraphImage(object):
                  base_url: str = None,
                  username: str = None,
                  password: str = None):
+        """Initialise the GraphImage session (including login)
+
+        Arguments:
+            base_url {str} -- Base URL to Zabbix (default: ZABBIX_SERVER environment variable or
+                                                    https://localhost/zabbix)
+            username {str} -- Zabbix Username (default: ZABBIX_USER environment variable or 'Admin')
+            password {str} -- Zabbix Password (default: ZABBIX_PASSWORD environment variable or 'zabbix')
+        """
         url = base_url or os.environ.get(
-            'ZABBIX_SERVER') or 'https://localhost/zabbix'
+            'ZABBIX_SERVER') or 'http://localhost/zabbix'
         self.BASE_URL = url.replace(
             "/api_jsonrpc.php",
             "") if not url.endswith('/api_jsonrpc.php') else url
@@ -35,6 +52,19 @@ class GraphImage(object):
                         height: str = "452",
                         save: bool = False,
                         output_path: str = None):
+        """Gets the Zabbix Graph and either outputs to stdout or optionally
+            saves to file
+
+        Arguments:
+            graph_id {str} -- Zabbix Graph object ID
+            from_date {str} -- Time to graph from like "now-x", "2019-08-03 16:20:04" etc (default: now-1d)
+            to_date {str} -- Time to graph until like "now", "2019-08-03 16:20:04" etc (default: now)
+            width {str} -- Width of graph (default: 1782)
+            height {str} -- Height of graph (default: 452)
+            save {bool} -- Whether to save to file (default: False)
+            output_path {str} -- (default: None)
+        """
+
         self._validate_times(from_date, to_date)
 
         with self.SESSION.get(
@@ -56,12 +86,26 @@ class GraphImage(object):
 
     def get_by_itemids(self,
                        item_ids: list(str),
+                       type: str = 1,
                        from_date: str = "now-1d",
                        to_date: str = "now",
                        width: str = "1782",
                        height: str = "452",
                        save: bool = False,
                        output_path: str = None):
+        """Gets the adhoc Zabbix Graph and either outputs to stdout or optionally
+            saves to file
+
+        Arguments:
+            item_ids {list(str)} -- Zabbix Graph object ID
+            type {str} -- Stacked graph (1) or normal overlay graph (0) (default 1)
+            from_date {str} -- Time to graph from like "now-x", "2019-08-03 16:20:04" etc (default: now-1d)
+            to_date {str} -- Time to graph until like "now", "2019-08-03 16:20:04" etc (default: now)
+            width {str} -- Width of graph (default: 1782)
+            height {str} -- Height of graph (default: 452)
+            save {bool} -- Whether to save to file (default: False)
+            output_path {str} -- (default: None)
+        """
         # TODO: add ad-hoc graphing support (i.e. graphs per item, NOT actual graph objects)
         #   this is done via "chart.php" not chart2
         raise NotImplementedError("Not yet added")

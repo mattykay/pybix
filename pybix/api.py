@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""api
+    Contains Zabbix API handling methods
+"""
+
 import os
 import requests
 import json
@@ -30,7 +36,7 @@ class ZabbixAPI(object):
                              (default: ZABBIX_SESSION_TIMEOUT environment variable or None - don't timeout)
         """
         url = url or os.environ.get(
-            'ZABBIX_SERVER') or 'https://localhost/zabbix'
+            'ZABBIX_SERVER') or 'http://localhost/zabbix'
         self.URL = f"{url}/api_jsonrpc.php" if not url.endswith(
             '/api_jsonrpc.php') else url
 
