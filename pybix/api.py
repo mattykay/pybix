@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 class ZabbixAPIException(Exception):
     """ Zabbix API Exception
          -32700 - invalid JSON. An error occurred on the server while parsing the JSON text (typo, wrong quotes, etc.)
-         -32600 - received JSON is not a valid JSON-RPC Request 
+         -32600 - received JSON is not a valid JSON-RPC Request
          -32601 - requested remote-procedure does not exist
          -32602 - invalid method parameters
          -32603 - Internal JSON-RPC error
@@ -23,10 +23,11 @@ class ZabbixAPIException(Exception):
 class ZabbixAPI(object):
     def __init__(self, url: str = None, timeout: int = None):
         """Initialise the ZabbixAPI (but not login)
-        
+
         Arguments:
-            url {str} -- Base URL to Zabbix web (default: ZABBIX_SERVER environment variable or https://localhost/zabbix)
-            timeout {int} -- Timeout for API request in seconds (default: ZABBIX_SESSION_TIMEOUT environment variable or None - don't timeout)
+            url {str} -- Base URL to Zabbix (default: ZABBIX_SERVER environment variable or https://localhost/zabbix)
+            timeout {int} -- Timeout for API request in seconds
+                             (default: ZABBIX_SESSION_TIMEOUT environment variable or None - don't timeout)
         """
         url = url or os.environ.get(
             'ZABBIX_SERVER') or 'https://localhost/zabbix'
@@ -53,7 +54,7 @@ class ZabbixAPI(object):
     def __exit__(self, exception_type, exception_value, traceback):
         self.logout()
 
-    def __getattr__(self, name : str):
+    def __getattr__(self, name: str):
         return ZabbixObject(name, self)
 
     def login(self, user: str = None, password: str = None) -> None:
@@ -85,7 +86,8 @@ class ZabbixAPI(object):
         }
 
         # Only add auth if method requires it
-        if self.AUTH and (method not in ('apiinfo.version', 'user.login', 'user.checkAuthentication')):
+        if self.AUTH and (method not in ('apiinfo.version', 'user.login',
+                                         'user.checkAuthentication')):
             request['auth'] = self.AUTH
 
         logger.debug(
@@ -110,13 +112,14 @@ class ZabbixAPI(object):
 
         if 'error' in response_json:
             raise ZabbixAPIException(
-                f"Error {response_json['error']['code']}: {response_json['error']['message']}, {response_json['error']['data']}",
+                f"Error {response_json['error']['code']}: {response_json['error']['message']},"
+                f" {response_json['error']['data']}",
                 response_json['error']['code'])
 
         return response_json
 
     def check_authentication(self):
-        """ Convenience method for calling user.checkAuthentication of the current session"""
+        """ Convenience method for calling user.checkAuthentication of the current session """
         return self.user.checkAuthentication(sessionid=self.AUTH)
 
     @property
@@ -124,7 +127,7 @@ class ZabbixAPI(object):
         return self.apiinfo.version()
 
     @property
-    def is_authenticated(self):
+    def is_authenticated(self) -> bool:
         if not self.AUTH:
             logger.debug("is_authenticated(): No AUTH token")
             return False
