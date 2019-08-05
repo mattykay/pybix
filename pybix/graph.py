@@ -85,7 +85,7 @@ class GraphImage(object):
                         sys.stdout.buffer.write(chunk)
 
     def get_by_itemids(self,
-                       item_ids: list(str),
+                       item_ids: list,
                        type: str = 1,
                        from_date: str = "now-1d",
                        to_date: str = "now",
