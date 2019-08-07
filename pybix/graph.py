@@ -9,13 +9,17 @@ import requests
 import os
 import sys
 import logging
-from requests.exceptions import SSLError
+from datetime import datetime
+from requests import Response
+from pathlib import PurePath
 
 logger = logging.getLogger(__name__)
 
 
 class GraphImage(object):
-    """ Class that handles getting/saving Zabbix Graph Images directly """
+    """Class that handles getting/saving Zabbix Graph Images directly
+        Note: This is not a Zabbix API object
+    """
 
     def __init__(self,
                  base_url: str = None,
@@ -49,7 +53,7 @@ class GraphImage(object):
             f"GraphImage(): Attempting to login to Zabbix server at {self.BASE_URL}/index.php")
         try:
             self.SESSION.post(f"{self.BASE_URL}/index.php", data=payload)
-        except SSLError as ex:
+        except requests.exceptions.SSLError as ex:
             logger.debug(
                 f"GraphImage(): Retrying without SSL verification due to exception {ex}")
             self.SESSION.post(f"{self.BASE_URL}/index.php",
@@ -64,10 +68,8 @@ class GraphImage(object):
                         to_date: str = "now",
                         width: str = "1782",
                         height: str = "452",
-                        save: bool = False,
-                        output_path: str = None):
-        """Gets the Zabbix Graph and either outputs to stdout or optionally
-            saves to file
+                        output_path: str = None) -> str:
+        """Gets the Zabbix Graph by Graph ID and save to file based on output_path
 
         Arguments:
             graph_id {str} -- Zabbix Graph object ID
@@ -75,28 +77,21 @@ class GraphImage(object):
             to_date {str} -- Time to graph until like "now", "2019-08-03 16:20:04" etc (default: now)
             width {str} -- Width of graph (default: 1782)
             height {str} -- Height of graph (default: 452)
-            save {bool} -- Whether to save to file (default: False)
-            output_path {str} -- (default: None)
-        """
+            output_path {str} -- (default: os.getcwd())
 
+        Returns:
+            file_name {str} -- The name of the saved graph image
+        """
         self._validate_times(from_date, to_date)
 
         with self.SESSION.get(
                 f"{self.BASE_URL}/chart2.php?graphid={graph_id}&from={from_date}&to={to_date}"
                 f"&profileIdx=web.graphs.filter&width={width}&height={height}",
                 stream=True) as image:
-            if save:
-                # Save to file
-                output_path = output_path or os.getcwd()
-                with open(f"{output_path}/graph-{graph_id}.png", 'wb') as f:
-                    for chunk in image.iter_content(chunk_size=8192):
-                        if chunk:  # filter out keep-alive new chunks
-                            f.write(chunk)
-            else:
-                # Output to console (which can be redirected to file)
-                for chunk in image.iter_content(chunk_size=8192):
-                    if chunk:  # filter out keep-alive new chunks
-                        sys.stdout.buffer.write(chunk)
+            file_name = self._save(
+                image, f"graph-{graph_id}-from-{from_date}-to-{to_date}", output_path)
+
+        return file_name
 
     def get_by_itemids(self,
                        item_ids: list,
@@ -105,10 +100,8 @@ class GraphImage(object):
                        to_date: str = "now",
                        width: str = "1782",
                        height: str = "452",
-                       save: bool = False,
-                       output_path: str = None):
-        """Gets the adhoc Zabbix Graph and either outputs to stdout or optionally
-            saves to file
+                       output_path: str = None) -> str:
+        """Gets the Zabbix Graph by Item ID(s) and save to file based on output_path
 
         Arguments:
             item_ids {list(str)} -- Zabbix Graph object ID
@@ -117,12 +110,43 @@ class GraphImage(object):
             to_date {str} -- Time to graph until like "now", "2019-08-03 16:20:04" etc (default: now)
             width {str} -- Width of graph (default: 1782)
             height {str} -- Height of graph (default: 452)
-            save {bool} -- Whether to save to file (default: False)
-            output_path {str} -- (default: None)
+            output_path {str} -- Path to save to (default: None)
+
+        Returns:
+            file_name {str} -- The name of the saved graph image
         """
         # TODO: add ad-hoc graphing support (i.e. graphs per item, NOT actual graph objects)
-        #   this is done via "chart.php" not chart2
+        #   this is done via "chart.php" not chart2 which requires url encoding for multiple ids
         raise NotImplementedError("Not yet added")
+
+    def _save(self, image: Response, graph_details: str, output_path: str = None) -> str:
+        """Saves Image to file in format 'graphimage-<graph_details>-<<yearmonthday>.png'
+
+        Arguments:
+            image {Response} -- Binary stream representing image to be saved
+            graph_details {str} -- Either Zabbix Graph or Item ID
+            output_path {str} -- Path to save to (default: os.getcwd())
+
+        Returns:
+            file_name {str} -- The name of the saved graph image
+        """
+        output_path = output_path or os.getcwd()
+        file_name = PurePath(
+            output_path, f"graphimage-{graph_details}-{datetime.now().strftime('%Y%m%d')}.png").__str__()
+        try:
+            with open(file_name, 'wb') as f:
+                for chunk in image.iter_content(chunk_size=8192):
+                    if chunk:  # Filter out keep-alive new chunks
+                        f.write(chunk)
+        except FileNotFoundError as ex:
+            logger.error(
+                f"_save(): Unable to save to output_path:{output_path}")
+            logger.error(
+                f"    Exception:{ex}")
+            return ""
+
+        logger.debug(f"_save(): Saved GraphImage to {file_name}")
+        return file_name
 
     def _validate_times(self, from_date: str, to_date: str):
         # TODO: validate times in correct format
