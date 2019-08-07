@@ -26,6 +26,12 @@ TODO
 
 TODO
 
+## Known Issues
+
+### Graph Items Usage
+
+* User used to login must have frontend access (i.e. in Zabbix user group, set frontend access to true)
+
 ## Contributing
 
 TODO

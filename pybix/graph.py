@@ -4,10 +4,12 @@
     Contains methods relating to graph image exporting
 """
 
+import urllib3
 import requests
 import os
 import sys
 import logging
+from requests.exceptions import SSLError
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +35,6 @@ class GraphImage(object):
             "/api_jsonrpc.php",
             "") if not url.endswith('/api_jsonrpc.php') else url
 
-        # Perform Login (note: not via Zabbix API since it doesn't
-        #   expose graph exports, only configuration)
         payload = {
             'name': username or os.environ.get('ZABBIX_USER') or 'Admin',
             'password': password or os.environ.get('ZABBIX_PASSWORD')
@@ -42,7 +42,21 @@ class GraphImage(object):
             'enter': 'Sign in'
         }
         self.SESSION = requests.Session()
-        self.SESSION.post(f"{self.BASE_URL}/index.php", data=payload)
+
+        # Perform Login (note: not via Zabbix API since it doesn't
+        #   expose graph exports, only configuration)
+        logger.debug(
+            f"GraphImage(): Attempting to login to Zabbix server at {self.BASE_URL}/index.php")
+        try:
+            self.SESSION.post(f"{self.BASE_URL}/index.php", data=payload)
+        except SSLError as ex:
+            logger.debug(
+                f"GraphImage(): Retrying without SSL verification due to exception {ex}")
+            self.SESSION.post(f"{self.BASE_URL}/index.php",
+                              data=payload, verify=False)
+
+            # Disable SSL verification warnings at this point
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     def get_by_graph_id(self,
                         graph_id: str,
