@@ -4,6 +4,7 @@
     Contains Zabbix API handling methods
 """
 
+import urllib3
 import os
 import requests
 import json
@@ -27,13 +28,14 @@ class ZabbixAPIException(Exception):
 
 
 class ZabbixAPI(object):
-    def __init__(self, url: str = None, timeout: int = None):
+    def __init__(self, url: str = None, timeout: int = None, ssl_verify=True):
         """Initialise the ZabbixAPI (but not login)
 
         Arguments:
             url {str} -- Base URL to Zabbix (default: ZABBIX_SERVER environment variable or https://localhost/zabbix)
             timeout {int} -- Timeout for API request in seconds
                              (default: ZABBIX_SESSION_TIMEOUT environment variable or None - don't timeout)
+            ssl_verify {bool} -- Whether to attempt SSL verification during call (default: True)
         """
         url = url or os.environ.get(
             'ZABBIX_SERVER') or 'http://localhost/zabbix'
@@ -54,6 +56,10 @@ class ZabbixAPI(object):
             'Cache-Control': 'no-cache'
         })
 
+        self.SSL_VERIFY = ssl_verify
+        if not self.SSL_VERIFY:
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
     def __enter__(self):
         return self
 
@@ -63,7 +69,15 @@ class ZabbixAPI(object):
     def __getattr__(self, name: str):
         return ZabbixObject(name, self)
 
-    def login(self, user: str = None, password: str = None) -> None:
+    def login(self, user: str = None, password: str = None):
+        """Login to Zabbix API
+
+        Arguments:
+            user {str} -- Zabbix username (default: ZABBIX_USER environment variable or Admin)
+            password {str} -- Zabbix user's password (default: ZABBIX_PASSWORD environment variable or zabbix)
+        """
+        # TODO allow session reuse?
+
         if self.AUTH:
             # TODO validate still active, in which case use current auth
             pass
@@ -102,7 +116,8 @@ class ZabbixAPI(object):
 
         response = self.SESSION.post(self.URL,
                                      data=json.dumps(request),
-                                     timeout=self.TIMEOUT)
+                                     timeout=self.TIMEOUT,
+                                     verify=self.SSL_VERIFY)
         response.raise_for_status()
 
         try:
