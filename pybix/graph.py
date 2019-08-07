@@ -24,7 +24,8 @@ class GraphImage(object):
     def __init__(self,
                  base_url: str = None,
                  username: str = None,
-                 password: str = None):
+                 password: str = None,
+                 ssl_verify: bool = True):
         """Initialise the GraphImage session (including login)
 
         Arguments:
@@ -32,6 +33,7 @@ class GraphImage(object):
                                                     https://localhost/zabbix)
             username {str} -- Zabbix Username (default: ZABBIX_USER environment variable or 'Admin')
             password {str} -- Zabbix Password (default: ZABBIX_PASSWORD environment variable or 'zabbix')
+            ssl_verify {bool} -- Whether to attempt SSL verification during call (default: True)
         """
         url = base_url or os.environ.get(
             'ZABBIX_SERVER') or 'http://localhost/zabbix'
@@ -46,23 +48,18 @@ class GraphImage(object):
             'enter': 'Sign in'
         }
         self.SESSION = requests.Session()
+        self.SSL_VERIFY = ssl_verify
 
         # Perform Login (note: not via Zabbix API since it doesn't
         #   expose graph exports, only configuration)
         logger.debug(
             f"GraphImage(): Attempting to login to Zabbix server at {self.BASE_URL}/index.php")
-        try:
-            self.SESSION.post(f"{self.BASE_URL}/index.php", data=payload)
-        except requests.exceptions.SSLError as ex:
-            logger.debug(
-                f"GraphImage(): Retrying without SSL verification due to exception {ex}")
-            self.SESSION.post(f"{self.BASE_URL}/index.php",
-                              data=payload, verify=False)
-
-            # Disable SSL verification warnings at this point
+        if not self.SSL_VERIFY:
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        self.SESSION.post(f"{self.BASE_URL}/index.php",
+                          data=payload, verify=self.SSL_VERIFY)
 
-    def get_by_graph_id(self,
+    def _get_by_graphid(self,
                         graph_id: str,
                         from_date: str = "now-1d",
                         to_date: str = "now",
@@ -93,14 +90,14 @@ class GraphImage(object):
 
         return file_name
 
-    def get_by_itemids(self,
-                       item_ids: list,
-                       type: str = 1,
-                       from_date: str = "now-1d",
-                       to_date: str = "now",
-                       width: str = "1782",
-                       height: str = "452",
-                       output_path: str = None) -> str:
+    def _get_by_itemids(self,
+                        item_ids: list,
+                        type: str = 1,
+                        from_date: str = "now-1d",
+                        to_date: str = "now",
+                        width: str = "1782",
+                        height: str = "452",
+                        output_path: str = None) -> str:
         """Gets the Zabbix Graph by Item ID(s) and save to file based on output_path
 
         Arguments:
