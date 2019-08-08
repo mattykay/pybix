@@ -129,7 +129,7 @@ class GraphImage(object):
         """
         output_path = output_path or os.getcwd()
         file_name = PurePath(
-            output_path, f"zabbix_{graph_details}_{datetime.now().strftime('%Y%m%d-%M:%S')}.png").__str__()
+            output_path, f"zabbix_{graph_details}_{datetime.now().strftime('%Y%m%d-%H%M%S')}.png").__str__()
         try:
             with open(file_name, 'wb') as f:
                 for chunk in image.iter_content(chunk_size=8192):
