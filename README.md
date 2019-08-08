@@ -23,12 +23,18 @@ TODO
 ## Requirements
 
 * Python 3.6 or greater
+* Zabbix 2.0 or greater
+  * Only tested on >4.0
 
 ## Usage
 
 ### Zabbix API
 
-#### Import Python module
+Refer to [Zabbix Offical API object](https://www.zabbix.com/documentation/4.2/manual/api/reference) references for objects that can be queried and their parameters.
+
+API structure all uses format like `ZAPI.<object>.<action>(<parameters>)` e.g. `ZAPI.host.get()`.
+
+#### Import as Python module
 
 ##### Directly
 
