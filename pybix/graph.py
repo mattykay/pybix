@@ -80,7 +80,9 @@ class GraphImage(object):
         Returns:
             file_name {str} -- The name of the saved graph image
         """
-        self._validate_times(from_date, to_date)
+        self._validate_times(from_date=from_date, to_date=to_date)
+        self._validate_inputs(from_date=from_date,
+                              to_date=to_date, width=width, height=height)
 
         with self.SESSION.get(
                 f"{self.BASE_URL}/chart2.php?graphid={graph_id}&from={from_date}&to={to_date}"
@@ -93,29 +95,45 @@ class GraphImage(object):
 
     def _get_by_itemids(self,
                         item_ids: list,
-                        type: str = 1,
                         from_date: str = "now-1d",
                         to_date: str = "now",
                         width: str = "1782",
                         height: str = "452",
+                        batch: str = "1",
+                        graph_type: str = "0",
                         output_path: str = None) -> str:
         """Gets the Zabbix Graph by Item ID(s) and save to file based on output_path
 
         Arguments:
             item_ids {list(str)} -- Zabbix Graph object ID
-            type {str} -- Stacked graph (1) or normal overlay graph (0) (default 1)
             from_date {str} -- Time to graph from like "now-x", "2019-08-03 16:20:04" etc (default: now-1d)
             to_date {str} -- Time to graph until like "now", "2019-08-03 16:20:04" etc (default: now)
             width {str} -- Width of graph (default: 1782)
             height {str} -- Height of graph (default: 452)
+            batch {str} -- Whether to get all values (0) or averages (1) (default: 1)
+            type {str} -- Whether to get normal overlay graph (0) or stacked graph (1) (default: 0)
             output_path {str} -- Path to save to (default: None)
 
         Returns:
             file_name {str} -- The name of the saved graph image
         """
-        # TODO: add ad-hoc graphing support (i.e. graphs per item, NOT actual graph objects)
-        #   this is done via "chart.php" not chart2 which requires url encoding for multiple ids
-        raise NotImplementedError("Not yet added")
+        self._validate_times(from_date=from_date, to_date=to_date)
+        self._validate_inputs(from_date=from_date,
+                              to_date=to_date, width=width, height=height, batch=batch)
+
+        encoded_itemids = "&".join(
+            [f"itemids%5B{item_id}%5D={item_id}" for item_id in item_ids])
+        formatted_itemids = "-".join(item_ids)
+
+        with self.SESSION.get(
+                f"{self.BASE_URL}/chart.php?from={from_date}&to={to_date}&{encoded_itemids}"
+                f"&type={graph_type}&batch={batch}&profileIdx=web.graphs.filter&width={width}&height={height}"
+                f"",
+                stream=True) as image:
+            file_name = self._save(
+                image, f"items-{formatted_itemids}-from-{from_date}-to-{to_date}", output_path)
+
+        return file_name
 
     def _save(self, image: Response, graph_details: str, output_path: str = None) -> str:
         """Saves Image to file in format 'graphimage-<graph_details>-<<yearmonthday>.png'
@@ -149,6 +167,10 @@ class GraphImage(object):
     def _validate_times(self, from_date: str, to_date: str):
         # TODO: validate times in correct format
         # Can be "now-x" or "2019-08-03 16:20:04" (note this must be encoded)
+        pass
+
+    def _validate_inputs(self, **kwargs):
+        # TODO: validate inputs have acceptable values and type
         pass
 
 
@@ -189,8 +211,11 @@ class GraphImageAPI(GraphImage):
                        from_date: str = "now-1d",
                        to_date: str = "now",
                        width: str = "1782",
-                       height: str = "452"):
-        raise NotImplementedError("Not added yet")
+                       height: str = "452",
+                       batch: str = "1",
+                       graph_type: str = "0"):
+        return self._get_by_itemids(item_ids=item_ids, from_date=from_date, to_date=to_date, width=width,
+                                    height=height, batch=batch, graph_type=graph_type, output_path=self.OUTPUT_PATH)
 
     def get_by_itemkeys(self, item_keys: list,
                         host_names: list = None,
@@ -198,15 +223,51 @@ class GraphImageAPI(GraphImage):
                         to_date: str = "now",
                         width: str = "1782",
                         height: str = "452"):
-        raise NotImplementedError("Not added yet")
+        if not item_keys:
+            raise ValueError("item_keys cannot be an empty string")
 
-    def get_by_itemname(self, item_names: list,
-                        host_names: list = None,
-                        from_date: str = "now-1d",
-                        to_date: str = "now",
-                        width: str = "1782",
-                        height: str = "452"):
-        raise NotImplementedError("Not added yet")
+        if host_names:
+            host_ids = [host['hostid']
+                        for host in self.ZAPI.host.get(filter={'host': host_names})]
+            items = [item for item in self.ZAPI.item.get(
+                hostids=host_ids, filter={'key_': item_keys})]
+        else:
+            items = [item for item in self.ZAPI.item.get(
+                search={'key_': item_keys})]
+
+        if not items:
+            logger.warn("get_by_graphname: No graphs returned")
+            return [""]
+        else:
+            return self.get_by_itemids(item_ids=[item['itemid'] for item in items], from_date=from_date,
+                                       to_date=to_date, width=width, height=height)
+
+    def get_by_itemnames(self, item_names: list,
+                         host_names: list = None,
+                         from_date: str = "now-1d",
+                         to_date: str = "now",
+                         width: str = "1782",
+                         height: str = "452",
+                         batch: str = "1",
+                         graph_type: str = "0"):
+        if not item_names:
+            raise ValueError("item_names cannot be an empty string")
+
+        if host_names:
+            host_ids = [host['hostid']
+                        for host in self.ZAPI.host.get(filter={'host': host_names})]
+            items = [item for item in self.ZAPI.item.get(
+                hostids=host_ids, search={'name': item_names})]
+        else:
+            items = [item for item in self.ZAPI.item.get(
+                search={'name': item_names})]
+
+        if not items:
+            logger.warn("get_by_graphname: No graphs returned")
+            return [""]
+        else:
+            return self.get_by_itemids(item_ids=[item['itemid'] for item in items], from_date=from_date,
+                                       to_date=to_date, width=width, height=height)
 
     def get_by_graphname(self, graph_name: str,
                          host_names: list = None,
