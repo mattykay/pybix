@@ -4,9 +4,11 @@
 
 ## Description
 
-Python based Zabbix API utility containing helper functions and CLI capabilities. 
+Python based Zabbix API utility containing helper functions and CLI capabilities.
 
-Takes inspiration from existing Python-Zabbix API modules like [lukecyca/pyzabbix](https://github.com/lukecyca/pyzabbix) and [adubkov/py-zabbix](https://github.com/adubkov/py-zabbix). While this module can be used in a similar way, the aim is to add a few out of the box helper functions and CLI handling for a more "batteries included" module.
+Takes inspiration from existing Python-Zabbix API modules like [lukecyca/pyzabbix](https://github.com/lukecyca/pyzabbix) and [adubkov/py-zabbix](https://github.com/adubkov/py-zabbix). 
+
+While this module can be used in a similar way, the aim is to add a few out of the box helper functions and CLI handling for a more "batteries included" module. For example GraphImage as described in usage
 
 ## Install
 
@@ -24,9 +26,64 @@ TODO
 
 ## Usage
 
-TODO
+### Zabbix API
+
+#### Import Python module
+
+##### Directly
+
+```python
+from pybix import ZabbixAPI
+ZAPI = ZabbixAPI(server="http://localhost/zabbix")
+ZAPI.login(user="Admin", password="zabbix")
+
+# Print all monitored hosts
+for host in ZAPI.host.get(output="extend",monitored_hosts=1):
+    print(host['host'])
+
+ZAPI.logout() # Explicitly logout to clear Zabbix session
+```
+
+##### With context manager to handle logout
+
+Note: Login still must be done manually (as in the future we may allow passing existing session, hence might not need to login everytime).
+
+```python
+from pybix import ZabbixAPI
+
+with ZabbixAPI() as ZAPI: # using defaults for server
+    ZAPI.login() # using defaults for user, password
+
+    # Print all monitored hosts
+    for host in ZAPI.host.get(output="extend",monitored_hosts=1):
+        print(host['host'])
+```
+
+#### CLI
+
+```python
+# TODO
+```
+
+### Graph Image Export
+
+Zabbix does not let you export graphs via API (only the configuration for them). Instead of using `ZabbixAPI` class, use included `GraphImage`.
+
+```python
+from pybix import GraphImageAPI
+graph = GraphImageAPI(server="http://localhost/zabbix",
+                         "Admin", "zabbix")
+graph.get_by_graphid("4038") # will save to png file in current working directory
+graph.get_by_graphname("CPU") # will save any "CPU" graph png images to file in current working directory
+```
 
 ## Known Issues
+
+### User configuration
+
+* Zabbix user used during API calls must have viewing rights to queried Zabbix object
+  * i.e. appropriate hostgroup read rights to user/usergroup OR super admin
+  * If it does not, it will simply return empty results without warning
 
 ### Graph Items Usage
 
