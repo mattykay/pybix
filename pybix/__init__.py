@@ -1,5 +1,5 @@
 from .api import ZabbixAPI
-from .graph import GraphImage
+from .graph import GraphImageAPI
 
 __version__ = '0.0.2'
 __license__ = "MIT"
