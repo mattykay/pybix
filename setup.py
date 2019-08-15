@@ -1,3 +1,4 @@
+import pybix
 import setuptools
 
 with open("README.md", "r") as fh:
@@ -5,9 +6,9 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="pybix",
-    version="0.0.1",
-    author="Matthew Kalnins",
-    author_email="git@matthewkalnins.com",
+    version=pybix.__version__,
+    author=pybix.__author__,
+    author_email=pybix.__email__,
     description="Python based Zabbix API utility with helper functions ",
     License="MIT",
     keywords=["zabbix", "monitoring", "api"],
