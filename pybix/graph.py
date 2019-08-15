@@ -222,7 +222,8 @@ class GraphImageAPI(GraphImage):
                         from_date: str = "now-1d",
                         to_date: str = "now",
                         width: str = "1782",
-                        height: str = "452"):
+                        height: str = "452",
+                        graph_type: str = "0"):
         if not item_keys:
             raise ValueError("item_keys cannot be an empty string")
 
@@ -240,7 +241,7 @@ class GraphImageAPI(GraphImage):
             return [""]
         else:
             return self.get_by_itemids(item_ids=[item['itemid'] for item in items], from_date=from_date,
-                                       to_date=to_date, width=width, height=height)
+                                       to_date=to_date, width=width, height=height, graph_type=graph_type)
 
     def get_by_itemnames(self, item_names: list,
                          host_names: list = None,
@@ -267,7 +268,7 @@ class GraphImageAPI(GraphImage):
             return [""]
         else:
             return self.get_by_itemids(item_ids=[item['itemid'] for item in items], from_date=from_date,
-                                       to_date=to_date, width=width, height=height)
+                                       to_date=to_date, width=width, height=height, graph_type=graph_type)
 
     def get_by_graphname(self, graph_name: str,
                          host_names: list = None,
