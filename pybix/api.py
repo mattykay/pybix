@@ -90,6 +90,7 @@ class ZabbixAPI(object):
             self.AUTH = self.user.login(user=user, password=password)
 
     def logout(self):
+        """Logout from Zabbix API"""
         if self.AUTH:
             logger.debug("ZabbixAPI.logout()")
 
@@ -97,7 +98,16 @@ class ZabbixAPI(object):
             if self.user.logout():
                 self.AUTH = ''
 
-    def do_request(self, method: str, params: dict = None) -> str:
+    def do_request(self, method: str, params: dict = None) -> dict:
+        """Perform the REST API call
+
+        Arguments:
+            method {str} -- Zabbix API method (e.g. 'host.get')
+            params {dict} -- Parameters relevent to API call as per Zabbix documentation
+
+        Returns:
+            response {dict} -- The successful JSON response in Python dict format
+        """
         request = {
             'jsonrpc': '2.0',
             'method': method,
@@ -139,16 +149,30 @@ class ZabbixAPI(object):
 
         return response_json
 
-    def check_authentication(self):
-        """ Convenience method for calling user.checkAuthentication of the current session """
+    def check_authentication(self) -> dict:
+        """Convenience method for calling user.checkAuthentication of the current session
+
+        Returns:
+            response {dict} -- The successful JSON user.checkauthentication response in Python dict format
+        """
         return self.user.checkAuthentication(sessionid=self.AUTH)
 
     @property
     def api_version(self) -> str:
+        """Convenience method for getting API version response
+
+        Returns:
+            api_version {str} -- The Zabbix API version
+        """
         return self.apiinfo.version()
 
     @property
     def is_authenticated(self) -> bool:
+        """Convenience method for getting whether authenticated
+
+        Returns:
+            is_authenticated {bool} -- Whether authenticated or not
+        """
         if not self.AUTH:
             logger.debug("is_authenticated(): No AUTH token")
             return False
@@ -167,7 +191,7 @@ class ZabbixObject(object):
         self.PARENT = parent
 
     def __getattr__(self, name):
-        """ Dynamically create a method (ie: get) """
+        """Dynamically create a method (ie: get)"""
 
         def fn(*args, **kwargs):
             if args and kwargs:
