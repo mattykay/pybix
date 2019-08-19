@@ -8,7 +8,7 @@ Usage:
     pybix.py --version
 
 Arguments:
-  method        either Zabbix API reference e.g. 'host.get' or 'graphimage'
+  method        either Zabbix API reference as '<object>.<action>' or GraphImage API as 'graphimage.<search_type>' (e.g. 'host.get' or 'graphimage.graph_id')
   args          what arguments to pass to API call
 
 Options:
@@ -31,20 +31,26 @@ import pybix
 logger = logging.getLogger(__name__)
 
 
+def validate_arguments(arguments):
+    error = ""
+
+    if arguments['<method>'] and "." not in arguments['<method>']:
+        error = "Missing fullstop so appears invalid (expecting 'object.method', e.g. 'host.get' or 'graphimage.graph_name')"
+    elif arguments['<method>'] and arguments['<method>'].count('.') > 1:
+        error = "Method contains multiple fullstops (expecting 'object.method', e.g. 'host.get' or 'graphimage.graph_name')"
+    elif "log" in arguments['<method>']:
+        error = "Unable to perform logout/login methods via CLI, these are handled by this module."
+
+    if error:
+        logger.error(error)
+        exit(1)
+
+
 def main():
     arguments = docopt(__doc__, version=pybix.__version__)
 
     # Validate in expected structure
-    if arguments['<method>'] and "." not in arguments['<method>']:
-        logger.error(
-            "Missing fullstop so appears invalid (expecting 'object.method', e.g. 'host.get' or 'graphimage.graphname')"
-        )
-        exit(1)
-    elif "log" in arguments['<method>']:
-        logger.error(
-            "Unable to perform logout/login methods via CLI, these are handled by this module."
-        )
-        exit(1)
+    validate_arguments(arguments)
 
     # Setup logging
     logging.config.fileConfig(path.join(path.dirname(path.abspath(__file__)),
@@ -63,16 +69,27 @@ def main():
              for args in arguments['<args>']]
         }
 
-        # Handle if value is dictionary
+        # Handle if value is dictionary or list
         for key, value in FORMATTED_ARGUMENTS.items():
             # for filter="{name:[matthew,matt]}"
-            if '[' in value:
+            if '[' in value and '{' in value:
                 value = value.replace('{', '{\'').replace(
                     '[', '[\'').replace(':', '\':').replace(']', '\']').replace(',', '\',\'')
+            # for host_names=[server1,server2]
+            elif '[' in value:
+                value = value.replace('[', '[\'').replace(
+                    ',', '\',\'').replace(']', '\']')
             # for filter="{name:matthew}"
             elif '{' in value:
                 value = value.replace('{', '{\'').replace(
                     ':', '\':\'').replace('}', '\'}')
+            # for item search_types (e.g. item_ids=123) that expects list (e.g. item_ids=[123])
+            elif "graphimage" in arguments['<method>'] and arguments['<method>'].split(
+                    ".")[1].endswith('s') and key == arguments['<method>'].split(
+                    ".")[1] and '[' not in value:
+                FORMATTED_ARGUMENTS[arguments['<method>'].split(
+                    ".")[1]] = [v for v in value.split(',')]
+                continue
             # for value=key
             else:
                 continue

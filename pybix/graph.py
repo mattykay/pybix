@@ -318,7 +318,7 @@ class GraphImageAPI(GraphImage):
             logger.warn("get_by_graphname: No graphs returned")
             return [""]
         else:
-            return self.get_by_itemids(
+            return self.get_by_item_ids(
                 item_ids=[item['itemid'] for item in items],
                 from_date=from_date,
                 to_date=to_date,
@@ -372,7 +372,7 @@ class GraphImageAPI(GraphImage):
             logger.warn("get_by_graphname: No graphs returned")
             return [""]
         else:
-            return self.get_by_itemids(
+            return self.get_by_item_ids(
                 item_ids=[item['itemid'] for item in items],
                 from_date=from_date,
                 to_date=to_date,
