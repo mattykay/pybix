@@ -4,16 +4,6 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-requires = [
-    'requests>=2.22.0'
-
-]
-test_requirements = [
-    'pytest-mock',
-    'httpretty>=0.9.6',
-    'pytest>=5.0.1'
-]
-
 setuptools.setup(
     name="pybix",
     version=pybix.__version__,
@@ -26,10 +16,6 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/mattykay/pybix",
     packages=["pybix"],
-    python_requires=">=3.6",
-    install_requires=requires,
-    tests_require=test_requirements,
-    zip_safe=False,
     classifiers=[
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
