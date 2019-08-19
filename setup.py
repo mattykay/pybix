@@ -6,7 +6,6 @@ with open("README.md", "r") as fh:
 
 requires = [
     'requests>=2.22.0'
-
 ]
 test_requirements = [
     'pytest-mock',

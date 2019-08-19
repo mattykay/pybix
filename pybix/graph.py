@@ -7,7 +7,6 @@
 import urllib3
 import requests
 import os
-import sys
 import logging
 from datetime import datetime
 from requests import Response
@@ -23,20 +22,20 @@ class GraphImage(object):
     """
 
     def __init__(self,
-                 base_url: str = None,
+                 url: str = None,
                  username: str = None,
                  password: str = None,
                  ssl_verify: bool = True):
         """Initialise the GraphImage session (including login)
 
         Arguments:
-            base_url {str} -- Base URL to Zabbix (default: ZABBIX_SERVER environment variable or
+            url {str} -- Base URL to Zabbix (default: ZABBIX_SERVER environment variable or
                                                     https://localhost/zabbix)
             username {str} -- Zabbix Username (default: ZABBIX_USER environment variable or 'Admin')
             password {str} -- Zabbix Password (default: ZABBIX_PASSWORD environment variable or 'zabbix')
             ssl_verify {bool} -- Whether to attempt SSL verification during call (default: True)
         """
-        url = base_url or os.environ.get(
+        url = url or os.environ.get(
             'ZABBIX_SERVER') or 'http://localhost/zabbix'
         self.BASE_URL = url.replace(
             "/api_jsonrpc.php",

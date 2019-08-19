@@ -6,7 +6,7 @@
 
 Python based Zabbix API utility containing helper functions and CLI capabilities.
 
-Takes inspiration from existing Python-Zabbix API modules like [lukecyca/pyzabbix](https://github.com/lukecyca/pyzabbix) and [adubkov/py-zabbix](https://github.com/adubkov/py-zabbix). 
+Takes inspiration from existing Python-Zabbix API modules like [lukecyca/pyzabbix](https://github.com/lukecyca/pyzabbix) and [adubkov/py-zabbix](https://github.com/adubkov/py-zabbix).
 
 While this module can be used in a similar way, the aim is to add a few out of the box helper functions and CLI handling for a more "batteries included" module. For example GraphImage as described in usage which enables saving Zabbix graphs which is not possible via the API at this time.
 
@@ -14,11 +14,13 @@ While this module can be used in a similar way, the aim is to add a few out of t
 
 ### Pip
 
-TODO
+```
+pip install pybix
+```
 
 ### Docker
 
-TODO
+TODO - not yet available.
 
 ## Requirements
 
@@ -32,7 +34,7 @@ TODO
 
 Refer to [Zabbix Offical API object](https://www.zabbix.com/documentation/4.2/manual/api/reference) references for objects that can be queried and their parameters.
 
-API structure all uses format like `ZAPI.<object>.<action>(<parameters>)` e.g. `ZAPI.host.get()`.
+API structure all uses format like `ZAPI.<object>.<action>(<parameters>)` e.g. `ZAPI.host.get(output='extend')`.
 
 #### Import as Python module
 
@@ -40,7 +42,7 @@ API structure all uses format like `ZAPI.<object>.<action>(<parameters>)` e.g. `
 
 ```python
 from pybix import ZabbixAPI
-ZAPI = ZabbixAPI(server="http://localhost/zabbix")
+ZAPI = ZabbixAPI(url="http://localhost/zabbix")
 ZAPI.login(user="Admin", password="zabbix")
 
 # Print all monitored hosts
@@ -77,13 +79,18 @@ Zabbix does not let you export graphs via API (only the configuration for them).
 
 ```python
 from pybix import GraphImageAPI
-graph = GraphImageAPI(server="http://localhost/zabbix",
-                         "Admin", "zabbix")
+graph = GraphImageAPI(url="http://localhost/zabbix",
+                      user="Admin",
+                      password="zabbix")
 graph.get_by_graphid("4038") # will save to png file in current working directory
 graph.get_by_graphname("CPU") # will save any "CPU" graph png images to file in current working directory
 ```
 
 ## Known Issues
+
+### SSL Verification
+
+* If server using a self signed cert or serving on HTTPS
 
 ### User configuration
 
@@ -97,4 +104,4 @@ graph.get_by_graphname("CPU") # will save any "CPU" graph png images to file in 
 
 ## Contributing
 
-TODO
+Feel free to raise any feature requests/problems/improvements as issue or pull request via [GitHub](https://github.com/mattykay/pybix).
