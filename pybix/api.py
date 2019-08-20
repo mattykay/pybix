@@ -103,7 +103,7 @@ class ZabbixAPI(object):
 
         Arguments:
             method {str} -- Zabbix API method (e.g. 'host.get')
-            params {dict} -- Parameters relevent to API call as per Zabbix documentation
+            params {dict} -- Parameters relevant to API call as per Zabbix documentation
 
         Returns:
             response {dict} -- The successful JSON response in Python dict format
