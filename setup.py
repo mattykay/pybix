@@ -1,11 +1,12 @@
 import pybix
-import setuptools
+from setuptools import setup, find_packages
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 requires = [
-    'requests>=2.22.0'
+    'requests>=2.22.0',
+    'docopt>=0.6.2'
 ]
 test_requirements = [
     'pytest-mock',
@@ -13,7 +14,7 @@ test_requirements = [
     'pytest>=5.0.1'
 ]
 
-setuptools.setup(
+setup(
     name="pybix",
     version=pybix.__version__,
     author=pybix.__author__,
@@ -25,6 +26,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/mattykay/pybix",
     packages=["pybix"],
+    include_package_data=True,
     python_requires=">=3.6",
     install_requires=requires,
     tests_require=test_requirements,
