@@ -3,7 +3,7 @@
 """
 Usage:
     pybix.py <method> [--zabbix-server=ZABBIX_SERVER] [--zabbix-user=ZABBIX_USER]
-            [--zabbix-password=ZABBIX_PASSWORD] [--ssl-verify] [(-v | --verbose)] [<args> ...]
+            [--zabbix-password=ZABBIX_PASSWORD] [--ignore-ssl-verify] [(-v | --verbose)] [<args> ...]
     pybix.py (-h | --help)
     pybix.py --version
 
@@ -16,10 +16,10 @@ Options:
   --version
   -v, --verbose                      Whether to use verbose logging [default: False]
   --output-path=PATH                 Where to save graphs to default: cwd
-  --zabbix-server=ZABBIX_SERVER      [default: https://localhost/zabbix]
-  --zabbix-user=ZABBIX_USER          [default: Admin]
-  --zabbix-password=ZABBIX_PASSWORD  [default: zabbix]
-  --ssl-verify                       Whether to use SSL verification for API [default: True]
+  --zabbix-server=ZABBIX_SERVER      Server URL - default: ZABBIX_SERVER env or https://localhost/zabbix
+  --zabbix-user=ZABBIX_USER          Username - default: ZABBIX_USER env or Admin
+  --zabbix-password=ZABBIX_PASSWORD  Password - default: ZABBIX_PASSWORD env or zabbix
+  --ignore-ssl-verify                Whether to ignore SSL verification for API [default: False]
 """
 from docopt import docopt
 from os import path, environ
@@ -110,18 +110,19 @@ def main():
         'ZABBIX_USER') or 'Admin'
     PASSWORD = arguments['--zabbix-password'] or environ.get(
         'ZABBIX_PASSWORD') or 'zabbix'
+    SSL_VERIFY = not arguments['--ignore-ssl-verify'] or False
 
     try:
         if "graphimage" in arguments['<method>']:
             ZAPI = pybix.GraphImageAPI(url=URL,
                                        user=USER,
                                        password=PASSWORD,
-                                       ssl_verify=arguments['--ssl-verify'])
+                                       ssl_verify=SSL_VERIFY)
             print(ZAPI.get(arguments['<method>'].split(
                 ".")[1], **FORMATTED_ARGUMENTS))
             ZAPI.ZAPI.logout()
         else:
-            with pybix.ZabbixAPI(url=URL, ssl_verify=arguments['--ssl-verify']) as ZAPI:
+            with pybix.ZabbixAPI(url=URL, ssl_verify=SSL_VERIFY) as ZAPI:
                 ZAPI.login(user=USER, password=PASSWORD)
                 print(ZAPI.do_request(
                     arguments['<method>'], FORMATTED_ARGUMENTS)['result'])
