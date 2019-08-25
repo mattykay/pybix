@@ -16,6 +16,8 @@ class TestMain(object):
         assert not valid_method('user.logout')
 
     def test_format_arguments(self):
+        # No args
+        assert format_arguments([], 'host.get') == {}
         # Single args
         assert format_arguments(['graphid=1'], 'graphimage.graph_id') == {
             'graphid': '1'
@@ -33,4 +35,14 @@ class TestMain(object):
                 'host_names': ['server1', 'server2']
             }
         # Dictionary
-        # TODO
+        assert format_arguments(['filter={host:server1}'], 'host.get') == {
+            'filter': {
+                'host': 'server1'
+            }
+        }
+        assert format_arguments(['filter={host:[server1,server2]}'],
+                                'host.get') == {
+                                    'filter': {
+                                        'host': ['server1', 'server2']
+                                    }
+                                }
