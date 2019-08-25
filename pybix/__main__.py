@@ -31,26 +31,84 @@ import pybix
 logger = logging.getLogger(__name__)
 
 
-def validate_arguments(arguments):
+def valid_method(method):
+    """Validates whether input method conforms to what we expect (i.e. '<object>.<action>' like 'host.get' or 'graphimage.graph_id')
+
+        Arguments:
+            method {str} -- The API method to perform (e.g. 'host.get' or 'graphimage.graph_id') 
+    """
     error = ""
 
-    if arguments['<method>'] and "." not in arguments['<method>']:
+    if method and "." not in method:
         error = "Missing fullstop so appears invalid (expecting 'object.method', e.g. 'host.get' or 'graphimage.graph_name')"
-    elif arguments['<method>'] and arguments['<method>'].count('.') > 1:
+    elif method and method.count('.') > 1:
         error = "Method contains multiple fullstops (expecting 'object.method', e.g. 'host.get' or 'graphimage.graph_name')"
-    elif "log" in arguments['<method>']:
+    elif "log" in method:
         error = "Unable to perform logout/login methods via CLI, these are handled by this module."
 
-    if error:
-        logger.error(error)
-        exit(1)
+    return True if not error else False
+
+
+def format_arguments(arguments, method):
+    """Formats the CLI arguments into appropriate form based on method
+
+        Arguments:
+            arguments {list[str]} -- The input arguments/paramaters to pass to API method
+            method {str} -- The API method to perform (e.g. 'host.get' or 'graphimage.graph_id') 
+    """
+    try:
+        FORMATTED_ARGUMENTS = {
+            key: value
+            for key, value in
+            [re.split(r'(^\w*)=(.*)', args)[1:3] for args in arguments]
+        }
+
+        # Handle if value is dictionary or list
+        for key, value in FORMATTED_ARGUMENTS.items():
+            # for filter="{name:[matthew,matt]}"
+            if '[' in value and '{' in value:
+                value = value.replace('{', '{\'').replace('[', '[\'').replace(
+                    ':', '\':').replace(']', '\']').replace(',', '\',\'')
+            # for host_names=[server1,server2]
+            elif '[' in value:
+                value = value.replace('[', '[\'').replace(',',
+                                                          '\',\'').replace(
+                                                              ']', '\']')
+            # for filter="{name:matthew}"
+            elif '{' in value:
+                value = value.replace('{', '{\'').replace(':',
+                                                          '\':\'').replace(
+                                                              '}', '\'}')
+            # for item search_types (e.g. item_ids=123) that expects list (e.g. item_ids=[123])
+            elif "graphimage" in method and method.split(".")[1].endswith(
+                    's') and key == method.split(".")[1] and '[' not in value:
+                FORMATTED_ARGUMENTS[method.split(".")[1]] = [
+                    v for v in value.split(',')
+                ]
+                continue
+            # for value=key
+            else:
+                continue
+
+            FORMATTED_ARGUMENTS[key] = ast.literal_eval(value)
+
+        logger.debug(FORMATTED_ARGUMENTS)
+        return FORMATTED_ARGUMENTS
+    except (ValueError, SyntaxError) as ex:
+        logger.debug(ex)
+        logger.error(
+            "Unable to interpret arguments, should be like: key1=value1 or key1='some value1'"
+            " or key2=\"{value2:[subvalue1, subvalue2]}\" or key3=\"{value3:subvalue3}\""
+        )
+        return None
 
 
 def main():
     arguments = docopt(__doc__, version=pybix.__version__)
 
     # Validate in expected structure
-    validate_arguments(arguments)
+    if not valid_method(arguments['<method>']):
+        exit(1)
 
     # Setup logging
     logging.config.fileConfig(path.join(path.dirname(path.abspath(__file__)),
@@ -58,74 +116,39 @@ def main():
                               disable_existing_loggers=False)
     if arguments['--verbose']:
         logging.getLogger().setLevel(logging.DEBUG)
-    logger.debug(arguments)
 
-    # Format args into dictionary to pass later
-    try:
-        FORMATTED_ARGUMENTS = {
-            key: value
-            for key, value in
-            [re.split(r'(^\w*)=(.*)', args)[1:3]
-             for args in arguments['<args>']]
-        }
-
-        # Handle if value is dictionary or list
-        for key, value in FORMATTED_ARGUMENTS.items():
-            # for filter="{name:[matthew,matt]}"
-            if '[' in value and '{' in value:
-                value = value.replace('{', '{\'').replace(
-                    '[', '[\'').replace(':', '\':').replace(']', '\']').replace(',', '\',\'')
-            # for host_names=[server1,server2]
-            elif '[' in value:
-                value = value.replace('[', '[\'').replace(
-                    ',', '\',\'').replace(']', '\']')
-            # for filter="{name:matthew}"
-            elif '{' in value:
-                value = value.replace('{', '{\'').replace(
-                    ':', '\':\'').replace('}', '\'}')
-            # for item search_types (e.g. item_ids=123) that expects list (e.g. item_ids=[123])
-            elif "graphimage" in arguments['<method>'] and arguments['<method>'].split(
-                    ".")[1].endswith('s') and key == arguments['<method>'].split(
-                    ".")[1] and '[' not in value:
-                FORMATTED_ARGUMENTS[arguments['<method>'].split(
-                    ".")[1]] = [v for v in value.split(',')]
-                continue
-            # for value=key
-            else:
-                continue
-            FORMATTED_ARGUMENTS[key] = ast.literal_eval(value)
-
-        logger.debug(FORMATTED_ARGUMENTS)
-    except (ValueError, SyntaxError) as ex:
-        logger.debug(ex)
-        logger.error(
-            "Unable to interpret arguments, should be like: key1=value1"
-            " or key2=\"{value2:[subvalue1, subvalue2]}\" or key3=\"{value3:subvalue3}\""
-        )
+    # Format args into dictionary to pass later, exiting if error
+    logger.debug(f"Initial arguments: {arguments}")
+    FORMATTED_ARGUMENTS = format_arguments(arguments['<args>'],
+                                           arguments['<method>'])
+    if not FORMATTED_ARGUMENTS:
         exit(1)
 
+    # Set args & handle defaults
     URL = arguments['--zabbix-server'] or environ.get(
         'ZABBIX_SERVER') or 'http://localhost/zabbix'
-    USER = arguments['--zabbix-user'] or environ.get(
-        'ZABBIX_USER') or 'Admin'
+    USER = arguments['--zabbix-user'] or environ.get('ZABBIX_USER') or 'Admin'
     PASSWORD = arguments['--zabbix-password'] or environ.get(
         'ZABBIX_PASSWORD') or 'zabbix'
     SSL_VERIFY = not arguments['--ignore-ssl-verify'] or False
 
+    # Process depending on whether graphimage or other
     try:
         if "graphimage" in arguments['<method>']:
             ZAPI = pybix.GraphImageAPI(url=URL,
                                        user=USER,
                                        password=PASSWORD,
                                        ssl_verify=SSL_VERIFY)
-            print(ZAPI.get(arguments['<method>'].split(
-                ".")[1], **FORMATTED_ARGUMENTS))
+            print(
+                ZAPI.get(arguments['<method>'].split(".")[1],
+                         **FORMATTED_ARGUMENTS))
             ZAPI.ZAPI.logout()
         else:
             with pybix.ZabbixAPI(url=URL, ssl_verify=SSL_VERIFY) as ZAPI:
                 ZAPI.login(user=USER, password=PASSWORD)
-                print(ZAPI.do_request(
-                    arguments['<method>'], FORMATTED_ARGUMENTS)['result'])
+                print(
+                    ZAPI.do_request(arguments['<method>'],
+                                    FORMATTED_ARGUMENTS)['result'])
     except TypeError as ex:
         logger.error(f"Unable to get '{arguments['<method>']}': {ex}")
         exit(1)
