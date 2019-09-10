@@ -35,7 +35,7 @@ def valid_method(method):
     """Validates whether input method conforms to what we expect (i.e. '<object>.<action>' like 'host.get' or 'graphimage.graph_id')
 
         Arguments:
-            method {str} -- The API method to perform (e.g. 'host.get' or 'graphimage.graph_id') 
+            method {str} -- The API method to perform (e.g. 'host.get' or 'graphimage.graph_id')
     """
     error = ""
 
@@ -54,7 +54,7 @@ def format_arguments(arguments, method):
 
         Arguments:
             arguments {list[str]} -- The input arguments/paramaters to pass to API method
-            method {str} -- The API method to perform (e.g. 'host.get' or 'graphimage.graph_id') 
+            method {str} -- The API method to perform (e.g. 'host.get' or 'graphimage.graph_id')
     """
     try:
         FORMATTED_ARGUMENTS = {
