@@ -1,5 +1,6 @@
-import pybix
+from pybix import ZabbixAPI, GraphImageAPI
 import logging
+import tempfile
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +12,7 @@ class Reporting:
 
     def __init__(self, **kwargs):
         # Set and perform validation of known inputs, prior to doing anything
-        self._OUTPUT_FORMAT = self._set_output_format(
+        self._OUTPUT_FORMAT = self._validate_output_format(
             kwargs.get('output_format'))
 
     def save(self, compiled_html):
@@ -26,7 +27,7 @@ class Reporting:
     def _save_as_pdf(self):
         raise NotImplementedError("Not implemented yet")
 
-    def _set_output_format(self, output_format: str) -> str:
+    def _validate_output_format(self, output_format: str) -> str:
         output_format = output_format.lower()
 
         if not output_format or output_format not in self._SUPPORTED_OUTPUT_FORMATS:
@@ -38,29 +39,57 @@ class Reporting:
 
 
 class GraphReporting(Reporting):
+    """ Gets and outputs all Graphs for input  """
+
     def __init__(self, output_format: str = "pdf"):
-        super().__init__(output_format)
+        super().__init__(output_format=output_format)
 
-    def run(self, hosts: list, hostgroups: list, output_format: str = "pdf"):
+    def run(self,
+            url: str = None,
+            user: str = None,
+            password: str = None,
+            hosts: list = None,
+            hostgroups: list = None,
+            from_date: str = "now-1M",
+            to_date: str = "now",):
+        with tempfile.TemporaryDirectory() as TEMP_DIR:
+            # Obtain Zabbix hosts metadata
+            with ZabbixAPI(url=url) as ZAPI:
+                ZAPI.login(user=user, password=password)
+                GRAPHS = self._get_graphs(ZAPI, hosts, hostgroups)
+
+            # Save all graphs per host to file
+            with GraphImageAPI(url=url,
+                               user=user,
+                               password=password) as GAPI:
+                for index, graph in enumerate(GRAPHS):
+                    GRAPHS[index]["file_path"] = GAPI.get_by_graphid(graph_id=graph["graphid"],
+                                                                     from_date=from_date,
+                                                                     to_date=to_date,
+                                                                     output_path=TEMP_DIR)
+
+            # Compile into report based on _OUTPUT_FORMAT
+            # TODO
+
+            # Output
+            # TODO
+
+    def _get_graphs(self, zabbix_api: ZabbixAPI, hosts: list, hostgroups: list) -> list:
+        """ Gets all hosts with graphs for input hosts AND hostgroups """
+        graphs = list()
+
         if not hosts and not hostgroups:
-            raise ValueError("Require hosts or hostgroups")
-
-        # Create temporary working directory
-        # TODO
-
-        # Get Zabbix metadata, then save all graphs per host
-        if hosts and hostgroups:
+            logger.warn(
+                "No hostgroups or hosts used, this may result in long processing times")
+            raise NotImplementedError("Not implemented yet")
+        elif hosts and hostgroups:
             raise NotImplementedError("Not implemented yet")
         elif hosts:
             raise NotImplementedError("Not implemented yet")
         elif hostgroups:
             raise NotImplementedError("Not implemented yet")
 
-        # Compile graphs into output_format, saving to cwd
-        # TODO
-
-        # Clean-up working directory
-        # TODO
+        return graphs
 
     def _compile_html(self):
         raise NotImplementedError("Not implemented yet")
