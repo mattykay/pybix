@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+  <head>
+    <title>{{page_title}}</title>
+  </head>
+  <body>
+    <div class="header">
+      <h1>{{page_title}}</h1>
+    </div>
+    <div>
+      {% for host, graphs in sorted_graphs %}
+        <h2>{{host}}</h2>
+        {% for graph in graphs %}
+            <img src="{{graph["file_path"]}}"> 
+        {% endfor %}
+      {% endfor %}
+    </div>
+  </body>
+</html>

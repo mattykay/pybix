@@ -1,6 +1,11 @@
+from itertools import groupby
 from pybix import ZabbixAPI, GraphImageAPI
+from jinja2 import Environment, PackageLoader, select_autoescape
 import logging
 import tempfile
+import os
+import sys
+
 
 logger = logging.getLogger(__name__)
 
@@ -48,36 +53,33 @@ class GraphReporting(Reporting):
             url: str = None,
             user: str = None,
             password: str = None,
+            ssl_verify: bool = True,
             hosts: list = None,
             hostgroups: list = None,
             from_date: str = "now-1M",
             to_date: str = "now",):
         with tempfile.TemporaryDirectory() as TEMP_DIR:
             # Obtain Zabbix hosts metadata
-            with ZabbixAPI(url=url) as ZAPI:
+            with ZabbixAPI(url=url, ssl_verify=ssl_verify) as ZAPI:
                 ZAPI.login(user=user, password=password)
                 GRAPHS = self._get_graphs(ZAPI, hosts, hostgroups)
 
             # Save all graphs per host to file, storing save path to metadata
-            with GraphImageAPI(url=url,
-                               user=user,
-                               password=password) as GAPI:
-                for index, graph in enumerate(GRAPHS):
-                    GRAPHS[index]["file_path"] = GAPI.get_by_graphid(graph_id=graph["graphid"],
-                                                                     from_date=from_date,
-                                                                     to_date=to_date,
-                                                                     output_path=TEMP_DIR)
+            GAPI = GraphImageAPI(url=url,
+                                 user=user,
+                                 password=password, ssl_verify=ssl_verify, output_path=TEMP_DIR)
+            for index, graph in enumerate(GRAPHS):
+                GRAPHS[index]["file_path"] = GAPI.get_by_graph_id(graph_id=graph["graphid"],
+                                                                  from_date=from_date,
+                                                                  to_date=to_date)
 
-            # Compile into report based on _OUTPUT_FORMAT
-            # TODO
-
-            # Output
-            # TODO
+            # Compile into html based report and output to alternate format if appropriate
+            self._output(self._compile(GRAPHS))
 
     def _get_graphs(self, zabbix_api: ZabbixAPI, hosts: list, hostgroups: list) -> list:
         """ Gets all hosts with graphs for input hosts AND hostgroups """
         logger.debug(f"inputs: hosts={hosts} - hostgroups={hostgroups}")
-        
+
         args = dict()
 
         if not hosts and not hostgroups:
@@ -92,10 +94,23 @@ class GraphReporting(Reporting):
 
         logger.debug(f"args={args}")
 
-        return zabbix_api.graph.get(**args)
+        return zabbix_api.graph.get(**args, selectHosts=True)
 
-    def _compile_html(self):
-        raise NotImplementedError("Not implemented yet")
+    def _compile(self, graphs: list) -> str:
+        # Group saved graphs per host
+        sorted_graphs = {host: [graph for graph in grouped_graphs] for host, grouped_graphs in groupby(
+            graphs, key=lambda x: x['hosts'][0]['host'])}
+
+        # Using Jinja templating, compile html of report
+        env = Environment(
+            loader=PackageLoader('reporting', 'templates'),
+            autoescape=select_autoescape(['html'])
+        )
+        template = env.get_template('graph_report_template.html')
+        return template.render(page_title="test", sorted_graphs=sorted_graphs.items())
+
+    def _output(self, compiled_html):
+        raise NotImplementedError("Not yet added")
 
 
 # DEBUG

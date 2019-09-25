@@ -11,6 +11,7 @@ requires = [
 test_requirements = [
     'pytest-mock',
     'httpretty>=0.9.6',
+    'Jinja2>=2.10.1',
     'pytest>=5.0.1'
 ]
 
