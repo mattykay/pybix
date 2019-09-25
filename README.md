@@ -139,6 +139,12 @@ python -m pybix graphimage.item_ids item_ids=138780,138781 host_names=server1
 
 ## Known Issues
 
+### Zabbix nested host groups does not work using API
+
+* Zabbix parent nested hostgroups only return what was in itself and not children
+  * (e.g. "Parent" should include "Parent/Child" which v4.2 and below does not)
+  * Future work: Check Server API version and if old, perform additional query to get similar named hostgroups
+
 ### SSL Verification
 
 * If server using a self signed cert or serving on HTTPS, will need to use `ssl_verify` overide

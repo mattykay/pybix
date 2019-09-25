@@ -58,7 +58,7 @@ class GraphReporting(Reporting):
                 ZAPI.login(user=user, password=password)
                 GRAPHS = self._get_graphs(ZAPI, hosts, hostgroups)
 
-            # Save all graphs per host to file
+            # Save all graphs per host to file, storing save path to metadata
             with GraphImageAPI(url=url,
                                user=user,
                                password=password) as GAPI:
@@ -76,20 +76,32 @@ class GraphReporting(Reporting):
 
     def _get_graphs(self, zabbix_api: ZabbixAPI, hosts: list, hostgroups: list) -> list:
         """ Gets all hosts with graphs for input hosts AND hostgroups """
-        graphs = list()
+        logger.debug(f"inputs: hosts={hosts} - hostgroups={hostgroups}")
+
+        # TODO refactor below to compile args, then return the call
 
         if not hosts and not hostgroups:
             logger.warn(
                 "No hostgroups or hosts used, this may result in long processing times")
-            raise NotImplementedError("Not implemented yet")
+            return zabbix_api.graph.get()
         elif hosts and hostgroups:
-            raise NotImplementedError("Not implemented yet")
+            return zabbix_api.graph.get(
+                hostids=[host["hostid"] for host in zabbix_api.host.get(
+                    filter={"host": hosts}, output="hostid")],
+                groupids=[group["groupid"] for group in zabbix_api.hostgroup.get(filter={"hostgroup": hostgroups}, output="groupid")])
         elif hosts:
-            raise NotImplementedError("Not implemented yet")
+            return zabbix_api.graph.get(
+                hostids=[host["hostid"] for host in zabbix_api.host.get(filter={"host": hosts}, output="hostid")])
         elif hostgroups:
-            raise NotImplementedError("Not implemented yet")
-
-        return graphs
+            return zabbix_api.graph.get(
+                groupids=[group["groupid"] for group in zabbix_api.hostgroup.get(filter={"hostgroup": hostgroups}, output="groupid")])
+        else:
+            raise ValueError("Unexpected value")
 
     def _compile_html(self):
         raise NotImplementedError("Not implemented yet")
+
+
+# DEBUG
+if __name__ == "__main__":
+    pass
