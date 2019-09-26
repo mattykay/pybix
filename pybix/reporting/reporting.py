@@ -3,8 +3,7 @@ from pybix import ZabbixAPI, GraphImageAPI
 from jinja2 import Environment, PackageLoader, select_autoescape
 import logging
 import tempfile
-import os
-import sys
+import weasyprint
 
 
 logger = logging.getLogger(__name__)
@@ -69,10 +68,12 @@ class GraphReporting(Reporting):
                                  user=user,
                                  password=password, ssl_verify=ssl_verify, output_path=TEMP_DIR)
             for index, graph in enumerate(GRAPHS):
-                GRAPHS[index]["file_path"] = GAPI.get_by_graph_id(graph_id=graph["graphid"],
-                                                                  from_date=from_date,
-                                                                  to_date=to_date)
-
+                # Tested Portrait ratio 500x150, landscape ratio 800 x 200
+                GRAPHS[index]["file_path"] = "file://" + GAPI.get_by_graph_id(graph_id=graph["graphid"],
+                                                                              from_date=from_date,
+                                                                              to_date=to_date,
+                                                                              width="500",
+                                                                              height="150")
             # Compile into html based report and output to alternate format if appropriate
             self._output(self._compile(GRAPHS))
 
@@ -107,10 +108,26 @@ class GraphReporting(Reporting):
             autoescape=select_autoescape(['html'])
         )
         template = env.get_template('graph_report_template.html')
-        return template.render(page_title="test", sorted_graphs=sorted_graphs.items())
+        return template.render(page_title="Zabbix Report", sorted_graphs=sorted_graphs.items())
 
     def _output(self, compiled_html):
-        raise NotImplementedError("Not yet added")
+        document = weasyprint.HTML(string=compiled_html).render(
+            stylesheets=[weasyprint.CSS('nec.css')])
+        table_of_contents_string = self._generate_outline_str(
+            document.make_bookmark_tree())
+        table_of_contents_document = weasyprint.HTML(
+            string="<h2>Table of Contents</h2>" + table_of_contents_string).render(stylesheets=[weasyprint.CSS('nec.css')])
+        document.pages.insert(0, table_of_contents_document.pages[0])
+        document.write_pdf(target='test.pdf')
+
+    def _generate_outline_str(self, bookmarks, indent=0):
+        # TODO - move to Jinja template
+        outline_str = ""
+        for i, (label, (page, _, _), children, _) in enumerate(bookmarks, 1):
+            outline_str += (
+                f'<div style="position:absolute; left:{indent * 5}px;">{i}. {label.lstrip("0123456789. ")}</div><br />')
+            outline_str += self._generate_outline_str(children, indent + 2)
+        return outline_str
 
 
 # DEBUG
