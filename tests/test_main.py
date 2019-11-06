@@ -33,7 +33,7 @@ class TestMain(object):
             'graphimage.item_names') == {
                 'item_names': ['agent availability'],
                 'host_names': ['server1', 'server2']
-            }
+        }
         # Dictionary
         assert format_arguments(['filter={host:server1}'], 'host.get') == {
             'filter': {
@@ -45,4 +45,4 @@ class TestMain(object):
                                     'filter': {
                                         'host': ['server1', 'server2']
                                     }
-                                }
+        }
