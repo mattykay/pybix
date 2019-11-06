@@ -56,7 +56,8 @@ class GraphReporting(Reporting):
             hosts: list = None,
             hostgroups: list = None,
             from_date: str = "now-1M",
-            to_date: str = "now",):
+            to_date: str = "now",
+            stylesheet_paths: list = []):
         with tempfile.TemporaryDirectory() as TEMP_DIR:
             # Obtain Zabbix hosts metadata
             with ZabbixAPI(url=url, ssl_verify=ssl_verify) as ZAPI:
@@ -75,7 +76,8 @@ class GraphReporting(Reporting):
                                                                               width="500",
                                                                               height="150")
             # Compile into html based report and output to alternate format if appropriate
-            self._output(self._compile(GRAPHS))
+            self._output(self._compile(GRAPHS),
+                         stylesheet_paths=stylesheet_paths)
 
     def _get_graphs(self, zabbix_api: ZabbixAPI, hosts: list, hostgroups: list) -> list:
         """ Gets all hosts with graphs for input hosts AND hostgroups """
@@ -108,20 +110,27 @@ class GraphReporting(Reporting):
             autoescape=select_autoescape(['html'])
         )
         template = env.get_template('graph_report_template.html')
+        # env = Environment(
+        #     loader=PackageLoader('reporting', 'templates', 'graph_report'),
+        #     autoescape=select_autoescape(['html'])
+        # )
+        # template = env.get_template('base.html')
         return template.render(page_title="Zabbix Report", sorted_graphs=sorted_graphs.items())
 
-    def _output(self, compiled_html):
+    def _output(self, compiled_html, stylesheet_paths):
+        stylesheets = [weasyprint.CSS(stylesheet_path)
+                       for stylesheet_path in stylesheet_paths]
         document = weasyprint.HTML(string=compiled_html).render(
-            stylesheets=[weasyprint.CSS('nec.css')])
+            stylesheets=stylesheets)
         table_of_contents_string = self._generate_outline_str(
             document.make_bookmark_tree())
         table_of_contents_document = weasyprint.HTML(
-            string="<h2>Table of Contents</h2>" + table_of_contents_string).render(stylesheets=[weasyprint.CSS('nec.css')])
+            string="<h2>Table of Contents</h2>" + table_of_contents_string).render(stylesheets=stylesheets)
         document.pages.insert(0, table_of_contents_document.pages[0])
         document.write_pdf(target='test.pdf')
 
     def _generate_outline_str(self, bookmarks, indent=0):
-        # TODO - move to Jinja template
+        # TODO - move to Jinja template and use references like https://github.com/Kozea/WeasyPrint/tree/gh-pages/samples/report
         outline_str = ""
         for i, (label, (page, _, _), children, _) in enumerate(bookmarks, 1):
             outline_str += (

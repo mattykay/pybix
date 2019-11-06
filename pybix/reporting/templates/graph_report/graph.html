@@ -1,0 +1,7 @@
+{% for host, graphs in sorted_graphs %}
+    <h2>{{host}}</h2>
+    {% for graph in graphs %}
+        <h3>{{graph["name"]}}</h3>
+        <img src="{{graph["file_path"]}}" alt="{{graph["name"]}} graph">
+    {% endfor %}
+{% endfor %}
