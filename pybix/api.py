@@ -174,13 +174,13 @@ class ZabbixAPI(object):
             is_authenticated {bool} -- Whether authenticated or not
         """
         if not self.AUTH:
-            logger.debug("is_authenticated(): No AUTH token")
+            logger.debug("No AUTH token")
             return False
 
         try:
             self.user.checkAuthentication(sessionid=self.AUTH)
         except ZabbixAPIException as ex:
-            logger.debug(f"is_authenticated(): ZabbixAPIException {ex}")
+            logger.debug("ZabbixAPIException: {}", ex)
             return False
         return True
 

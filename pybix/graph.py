@@ -161,11 +161,10 @@ class GraphImage(object):
                         f.write(chunk)
         except FileNotFoundError as ex:
             logger.error(
-                f"_save(): Unable to save to output_path:{output_path}")
-            logger.error(f"    Exception:{ex}")
+                "Unable to save to output_path: {}\nException: {}", output_path, ex)
             return ""
 
-        logger.debug(f"_save(): Saved GraphImage to {file_name}")
+        logger.debug("Saved GraphImage to {}", file_name)
         return file_name
 
 
@@ -202,7 +201,7 @@ class GraphImageAPI(GraphImage):
         Returns:
             file_name {str} -- The name of the saved graph image
         """
-        logger.debug(f"type: {search_type} - kwargs: {kwargs}")
+        logger.debug("type: {} - kwargs: {}", search_type, kwargs)
 
         if search_type == "graph_id":
             return self.get_by_graph_id(**kwargs)
