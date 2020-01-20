@@ -57,31 +57,37 @@ class GraphReporting(Reporting):
             hostgroups: list = None,
             from_date: str = "now-1M",
             to_date: str = "now",
-            stylesheet_paths: list = []):
+            stylesheet_paths: list = [],
+            skip_collated_graphs: bool = True):
         with tempfile.TemporaryDirectory() as TEMP_DIR:
             # Obtain Zabbix hosts metadata
             with ZabbixAPI(url=url, ssl_verify=ssl_verify) as ZAPI:
                 ZAPI.login(user=user, password=password)
                 GRAPHS = self._get_graphs(ZAPI, hosts, hostgroups)
 
+            # Skip any graphs with more than one host (i.e. plotting multiple servers on one graph)
+            if skip_collated_graphs:
+                GRAPHS = [graph for graph in GRAPHS if len(
+                    graph['hosts']) == 1]
+
             # Save all graphs per host to file, storing save path to metadata
-            GAPI = GraphImageAPI(url=url,
-                                 user=user,
-                                 password=password, ssl_verify=ssl_verify, output_path=TEMP_DIR)
+            GAPI = GraphImageAPI(url=url, user=user, password=password,
+                                 ssl_verify=ssl_verify, output_path=TEMP_DIR)
             for index, graph in enumerate(GRAPHS):
                 # Tested Portrait ratio 500x150, landscape ratio 800 x 200
                 GRAPHS[index]["file_path"] = "file://" + GAPI.get_by_graph_id(graph_id=graph["graphid"],
                                                                               from_date=from_date,
                                                                               to_date=to_date,
-                                                                              width="500",
+                                                                              width="560",
                                                                               height="150")
+                logger.debug("Added {}", GRAPHS[index]['file_path'])
             # Compile into html based report and output to alternate format if appropriate
             self._output(self._compile(GRAPHS),
                          stylesheet_paths=stylesheet_paths)
 
     def _get_graphs(self, zabbix_api: ZabbixAPI, hosts: list, hostgroups: list) -> list:
         """ Gets all hosts with graphs for input hosts AND hostgroups """
-        logger.debug(f"inputs: hosts={hosts} - hostgroups={hostgroups}")
+        logger.debug("inputs: hosts={} - hostgroups={}", hosts, hostgroups)
 
         args = dict()
 
@@ -93,9 +99,9 @@ class GraphReporting(Reporting):
                 filter={"host": hosts}, output="hostid")]
         if hostgroups:
             args["groupids"] = [group["groupid"] for group in zabbix_api.hostgroup.get(
-                filter={"hostgroup": hostgroups}, output="groupid")]
+                filter={"name": hostgroups}, output="groupid")]
 
-        logger.debug(f"args={args}")
+        logger.debug("args={}", args)
 
         return zabbix_api.graph.get(**args, selectHosts=True)
 
@@ -137,8 +143,3 @@ class GraphReporting(Reporting):
                 f'<div style="position:absolute; left:{indent * 5}px;">{i}. {label.lstrip("0123456789. ")}</div><br />')
             outline_str += self._generate_outline_str(children, indent + 2)
         return outline_str
-
-
-# DEBUG
-if __name__ == "__main__":
-    pass
