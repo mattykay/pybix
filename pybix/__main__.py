@@ -23,6 +23,7 @@ Options:
 """
 from docopt import docopt
 from os import path, environ
+from reporting import GraphReporting
 import re
 import ast
 import logging.config
@@ -142,6 +143,14 @@ def main():
             print(
                 ZAPI.get(arguments['<method>'].split(".")[1],
                          **FORMATTED_ARGUMENTS))
+            ZAPI.ZAPI.logout()
+        elif "reporting" in arguments['<method>']:
+            ZAPI = GraphReporting()
+            ZAPI.run(url=URL,
+                     user=USER,
+                     password=PASSWORD,
+                     ssl_verify=SSL_VERIFY,
+                     **FORMATTED_ARGUMENTS)
             ZAPI.ZAPI.logout()
         else:
             with pybix.ZabbixAPI(url=URL, ssl_verify=SSL_VERIFY) as ZAPI:
