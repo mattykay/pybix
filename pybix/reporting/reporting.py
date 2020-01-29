@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from itertools import groupby
 from pybix import ZabbixAPI, GraphImageAPI
 from jinja2 import Environment, PackageLoader, select_autoescape
@@ -117,8 +117,9 @@ class GraphReporting(Reporting):
             autoescape=select_autoescape(['html'])
         )
         template = env.get_template('base.html')
-        return template.render(page_title="Zabbix Report", sorted_graphs=sorted_graphs.items(), from_date=from_date,
-                               to_date=to_date, generated_time=datetime.now().strftime('%Y-%m-%d %H:%m'))
+        return template.render(page_title="Zabbix Report", sorted_graphs=sorted_graphs.items(),
+                               from_date=from_date, to_date=to_date,
+                               generated_time=f"{datetime.now().strftime('%Y-%m-%d %H:%m')} {datetime.now(timezone.utc).astimezone().tzname()}")
 
     def _output(self, compiled_html, stylesheet_paths):
         """ Uses weasyprint to render html to pdf"""
@@ -128,12 +129,3 @@ class GraphReporting(Reporting):
             stylesheets=stylesheets)
         document.write_pdf(
             target=f"zabbix-report-{datetime.now().strftime('%Y-%m-%d_%H-%m')}.pdf")
-
-    def _generate_outline_str(self, bookmarks, indent=0):
-        # TODO - move to Jinja template and use references like https://github.com/Kozea/WeasyPrint/tree/gh-pages/samples/report
-        outline_str = ""
-        for i, (label, (page, _, _), children, _) in enumerate(bookmarks, 1):
-            outline_str += (
-                f'<div style="position:absolute; left:{indent * 5}px;">{i}. {label.lstrip("0123456789. ")}</div><br />')
-            outline_str += self._generate_outline_str(children, indent + 2)
-        return outline_str
