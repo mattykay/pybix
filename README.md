@@ -120,7 +120,7 @@ graph.get_by_graphname("CPU") # will save any "CPU" graph png images to file in 
 
 ##### GraphImage CLI Usage
 
-Refer to [ZabbixAPI usage](#####zabbix-api-cli-usage).
+Refer to [ZabbixAPI usage](#zabbix-api-cli).
 
 `search_types` include `graph_id, graph_name, item_names, item_keys, item_ids`
 
