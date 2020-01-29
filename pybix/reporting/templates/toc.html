@@ -1,0 +1,10 @@
+<ul>
+    {% for host, graphs in sorted_graphs %}
+        <li><a href="#{{host|e}}">{{host}}</a></li>
+        <ul>
+        {% for graph in graphs %}
+            <li><a href="#{{host|e}}-{{graph["name"]|e}}">{{graph["name"]}}</a></li>
+        {% endfor %}
+        </ul>
+    {% endfor %}
+</ul>

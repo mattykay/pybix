@@ -1,3 +1,4 @@
+from datetime import datetime
 from itertools import groupby
 from pybix import ZabbixAPI, GraphImageAPI
 from jinja2 import Environment, PackageLoader, select_autoescape
@@ -80,14 +81,15 @@ class GraphReporting(Reporting):
                                                                               to_date=to_date,
                                                                               width="560",
                                                                               height="150")
-                logger.debug("Added {}", GRAPHS[index]['file_path'])
+                logger.debug("Added %s", GRAPHS[index]['file_path'])
             # Compile into html based report and output to alternate format if appropriate
-            self._output(self._compile(GRAPHS),
+            self._output(self._compile(GRAPHS, from_date=from_date,
+                                       to_date=to_date),
                          stylesheet_paths=stylesheet_paths)
 
     def _get_graphs(self, zabbix_api: ZabbixAPI, hosts: list, hostgroups: list) -> list:
         """ Gets all hosts with graphs for input hosts AND hostgroups """
-        logger.debug("inputs: hosts={} - hostgroups={}", hosts, hostgroups)
+        logger.debug("inputs: hosts=%s - hostgroups=%s", hosts, hostgroups)
 
         args = dict()
 
@@ -101,39 +103,31 @@ class GraphReporting(Reporting):
             args["groupids"] = [group["groupid"] for group in zabbix_api.hostgroup.get(
                 filter={"name": hostgroups}, output="groupid")]
 
-        logger.debug("args={}", args)
+        logger.debug("args=%s", args)
 
         return zabbix_api.graph.get(**args, selectHosts=True)
 
-    def _compile(self, graphs: list) -> str:
+    def _compile(self, graphs: list, from_date: str, to_date: str) -> str:
+        """ Uses Jinja templating """
         # Group saved graphs per host
         sorted_graphs = {host: [graph for graph in grouped_graphs] for host, grouped_graphs in groupby(
             graphs, key=lambda x: x['hosts'][0]['host'])}
-
-        # Using Jinja templating, compile html of report
         env = Environment(
             loader=PackageLoader('reporting', 'templates'),
             autoescape=select_autoescape(['html'])
         )
-        template = env.get_template('graph_report_template.html')
-        # env = Environment(
-        #     loader=PackageLoader('reporting', 'templates', 'graph_report'),
-        #     autoescape=select_autoescape(['html'])
-        # )
-        # template = env.get_template('base.html')
-        return template.render(page_title="Zabbix Report", sorted_graphs=sorted_graphs.items())
+        template = env.get_template('base.html')
+        return template.render(page_title="Zabbix Report", sorted_graphs=sorted_graphs.items(), from_date=from_date,
+                               to_date=to_date, generated_time=datetime.now().strftime('%Y-%m-%d %H:%m'))
 
     def _output(self, compiled_html, stylesheet_paths):
+        """ Uses weasyprint to render html to pdf"""
         stylesheets = [weasyprint.CSS(stylesheet_path)
                        for stylesheet_path in stylesheet_paths]
         document = weasyprint.HTML(string=compiled_html).render(
             stylesheets=stylesheets)
-        table_of_contents_string = self._generate_outline_str(
-            document.make_bookmark_tree())
-        table_of_contents_document = weasyprint.HTML(
-            string="<h2>Table of Contents</h2>" + table_of_contents_string).render(stylesheets=stylesheets)
-        document.pages.insert(0, table_of_contents_document.pages[0])
-        document.write_pdf(target='test.pdf')
+        document.write_pdf(
+            target=f"zabbix-report-{datetime.now().strftime('%Y-%m-%d_%H-%m')}.pdf")
 
     def _generate_outline_str(self, bookmarks, indent=0):
         # TODO - move to Jinja template and use references like https://github.com/Kozea/WeasyPrint/tree/gh-pages/samples/report

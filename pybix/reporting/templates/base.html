@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>{{page_title}}</title>
+  <meta name="description" content="{{page_title}}">
+</head>
+
+<body>
+  <article id="header">
+    <div class="header">
+      <h1>{{page_title}}</h1>
+    </div>
+  </article>
+
+  <article id="cover">
+    <div class="info">
+      {% include 'info.html' %}
+    </div>
+
+    <div class="toc">
+      {% include 'toc.html' %}
+    </div>
+  </article>
+
+  <article id="contents">
+    <div class="graphs">
+      {% include 'graph.html' %}
+    </div>
+  </article>
+</body>
+
+</html>

@@ -118,7 +118,7 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
 
     # Format args into dictionary to pass later, exiting if error
-    logger.debug("Initial arguments: {}", arguments)
+    logger.debug("Initial arguments: %s", arguments)
     FORMATTED_ARGUMENTS = format_arguments(arguments['<args>'],
                                            arguments['<method>'])
     if not FORMATTED_ARGUMENTS:
@@ -150,7 +150,7 @@ def main():
                     ZAPI.do_request(arguments['<method>'],
                                     FORMATTED_ARGUMENTS)['result'])
     except TypeError as ex:
-        logger.error("Unable to get '{}': {}", arguments['<method>'], ex)
+        logger.error("Unable to get '%s': %s", arguments['<method>'], ex)
         exit(1)
 
     exit(0)

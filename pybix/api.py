@@ -180,7 +180,7 @@ class ZabbixAPI(object):
         try:
             self.user.checkAuthentication(sessionid=self.AUTH)
         except ZabbixAPIException as ex:
-            logger.debug("ZabbixAPIException: {}", ex)
+            logger.debug("ZabbixAPIException: %s", ex)
             return False
         return True
 
