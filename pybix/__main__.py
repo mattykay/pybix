@@ -23,7 +23,6 @@ Options:
 """
 from docopt import docopt
 from os import path, environ
-from reporting import GraphReporting
 import re
 import ast
 import logging.config
@@ -122,8 +121,6 @@ def main():
     logger.debug("Initial arguments: %s", arguments)
     FORMATTED_ARGUMENTS = format_arguments(arguments['<args>'],
                                            arguments['<method>'])
-    if not FORMATTED_ARGUMENTS:
-        exit(1)
 
     # Set args & handle defaults
     URL = arguments['--zabbix-server'] or environ.get(
@@ -136,6 +133,9 @@ def main():
     # Process depending on whether graphimage or other
     try:
         if "graphimage" in arguments['<method>']:
+            if not FORMATTED_ARGUMENTS:
+                exit(1)
+
             ZAPI = pybix.GraphImageAPI(url=URL,
                                        user=USER,
                                        password=PASSWORD,
@@ -145,20 +145,22 @@ def main():
                          **FORMATTED_ARGUMENTS))
             ZAPI.ZAPI.logout()
         elif "reporting" in arguments['<method>']:
-            ZAPI = GraphReporting()
-            ZAPI.run(url=URL,
-                     user=USER,
-                     password=PASSWORD,
-                     ssl_verify=SSL_VERIFY,
-                     **FORMATTED_ARGUMENTS)
-            ZAPI.ZAPI.logout()
+            OUTPUT_DIRECTORY = FORMATTED_ARGUMENTS.pop(
+                "output_directory", '') or ''
+            ZAPI = pybix.reporting.GraphReporting(
+                output_directory=OUTPUT_DIRECTORY)
+            print(ZAPI.run(url=URL,
+                           user=USER,
+                           password=PASSWORD,
+                           ssl_verify=SSL_VERIFY,
+                           **FORMATTED_ARGUMENTS))
         else:
             with pybix.ZabbixAPI(url=URL, ssl_verify=SSL_VERIFY) as ZAPI:
                 ZAPI.login(user=USER, password=PASSWORD)
                 print(
                     ZAPI.do_request(arguments['<method>'],
                                     FORMATTED_ARGUMENTS)['result'])
-    except TypeError as ex:
+    except (TypeError, RuntimeError) as ex:
         logger.error("Unable to get '%s': %s", arguments['<method>'], ex)
         exit(1)
 

@@ -1,0 +1,17 @@
+# Pybix Reporting debug container
+#   This container sets up source code so that you can call Reporting code directly without setting up venv's etc.
+#   built via `docker build -t pybix -f docker/DockerFile .` (if proxy --build-arg http_proxy=http://myproxy.com)
+#   run via like `docker run pybix <Python args>`
+FROM python:3.7-slim
+
+COPY ./requirements.txt /
+RUN pip install -r requirements.txt
+
+RUN apt-get update
+RUN apt-get install -y build-essential libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info
+
+COPY ./ /
+
+# Command arguments are passed when running `docker run`, simply call reporting script
+ENTRYPOINT ["python", "-m", "pybix"]
+CMD []
