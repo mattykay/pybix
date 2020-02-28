@@ -112,7 +112,7 @@ from pybix import GraphImageAPI
 graph = GraphImageAPI(url="http://localhost/zabbix",
                       user="Admin",
                       password="zabbix")
-graph.get_by_graphid("4038") # will save to png file in current working directory
+graph.get_by_graph_id("4038") # will save to png file in current working directory
 graph.get_by_graphname("CPU") # will save any "CPU" graph png images to file in current working directory
 ```
 
