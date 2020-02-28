@@ -1,12 +1,12 @@
 from datetime import datetime, timezone
 from itertools import groupby
 from pybix import ZabbixAPI, GraphImageAPI
-from jinja2 import Environment, PackageLoader, select_autoescape
-import logging
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 import tempfile
+import pathlib
 import weasyprint
 
-
+import logging
 logger = logging.getLogger(__name__)
 
 
@@ -44,10 +44,11 @@ class Reporting:
 
 
 class GraphReporting(Reporting):
-    """ Gets and outputs all Graphs for input  """
+    """ Gets and outputs all Graphs for input """
 
-    def __init__(self, output_format: str = "pdf"):
+    def __init__(self, output_format: str = "pdf", output_directory: str = ""):
         super().__init__(output_format=output_format)
+        self._OUTPUT_FILE = f"{output_directory}zabbix-report-{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.{output_format}"
 
     def run(self,
             url: str = None,
@@ -82,10 +83,11 @@ class GraphReporting(Reporting):
                                                                               width="560",
                                                                               height="150")
                 logger.debug("Added %s", GRAPHS[index]['file_path'])
+            GAPI.ZAPI.logout()
             # Compile into html based report and output to alternate format if appropriate
-            self._output(self._compile(GRAPHS, from_date=from_date,
-                                       to_date=to_date),
-                         stylesheet_paths=stylesheet_paths)
+            return self._output(self._compile(GRAPHS, from_date=from_date,
+                                              to_date=to_date),
+                                stylesheet_paths=stylesheet_paths)
 
     def _get_graphs(self, zabbix_api: ZabbixAPI, hosts: list, hostgroups: list) -> list:
         """ Gets all hosts with graphs for input hosts AND hostgroups """
@@ -113,7 +115,8 @@ class GraphReporting(Reporting):
         sorted_graphs = {host: [graph for graph in grouped_graphs] for host, grouped_graphs in groupby(
             graphs, key=lambda x: x['hosts'][0]['host'])}
         env = Environment(
-            loader=PackageLoader('reporting', 'templates'),
+            loader=FileSystemLoader(
+                f"{pathlib.Path(__file__).parent.absolute()}/templates"),
             autoescape=select_autoescape(['html'])
         )
         template = env.get_template('base.html')
@@ -127,5 +130,8 @@ class GraphReporting(Reporting):
                        for stylesheet_path in stylesheet_paths]
         document = weasyprint.HTML(string=compiled_html).render(
             stylesheets=stylesheets)
-        document.write_pdf(
-            target=f"zabbix-report-{datetime.now().strftime('%Y-%m-%d_%H-%m')}.pdf")
+
+        if not document.write_pdf(target=self._OUTPUT_FILE):
+            return self._OUTPUT_FILE.split("/")[-1]
+        else:
+            raise RuntimeError("Unable to save report to pdf")
