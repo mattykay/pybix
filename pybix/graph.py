@@ -88,7 +88,7 @@ class GraphImage(object):
                 f"&profileIdx=web.graphs.filter&width={width}&height={height}",
                 stream=True) as image:
             file_name = self._save(
-                image, f"graph-{graph_id}-from-{from_date}-to-{to_date}",
+                image, f"graph-{graph_id}",
                 output_path)
 
         return file_name
