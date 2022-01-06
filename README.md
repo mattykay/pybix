@@ -1,6 +1,6 @@
 # pybix
 
-**NOTE: This module is still in development and may not be fully stable. Use at own risk.**
+**NOTE: This module has not been completed but is functional. Use at own risk.**
 
 ## Description
 
